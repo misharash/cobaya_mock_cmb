@@ -48,6 +48,8 @@ class MockCMBLikelihood(Likelihood):
         # If the file exists, initialize the fiducial values
         self.Cl_fid = np.zeros((3, self.l_max+1), 'float64')
         self.fid_values_exist = False
+        if not self.data_directory:
+            self.data_directory = os.path.dirname(os.path.realpath(__file__))
         if os.path.exists(os.path.join(
                 self.data_directory, self.fiducial_file)):
             self.fid_values_exist = True

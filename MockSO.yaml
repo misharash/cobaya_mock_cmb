@@ -2,7 +2,7 @@
 
 # where to read/write fiducial model:
 
-data_directory: .
+data_directory: null
 fiducial_file: mock_SO_fiducial.dat
 
 # experimental sensitivity:
