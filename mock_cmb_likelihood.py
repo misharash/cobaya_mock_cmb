@@ -92,35 +92,6 @@ class MockCMBLikelihood(Likelihood):
 
     def compute_lkl(self, cl, params_values):
 
-        # Write fiducial model spectra if needed (return an imaginary number in
-        # that case)
-        if not self.fid_values_exist:
-            # Store the values now.
-            fid_file = open(os.path.join(
-                self.data_directory, self.fiducial_file), 'w')
-            fid_file.write('# Fiducial parameters')
-            # for key, value in self.provider._current_state.get("params", {}):
-            #    fid_file.write(', %s = %.5g' % (
-            #        key, value['current']*value['scale']))
-            fid_file.write('\n')
-            for l in range(self.l_min, self.l_max+1):
-                self.Cl_fid[0, l] = cl['tt'][l]+self.noise_T[l]
-                self.Cl_fid[1, l] = cl['ee'][l]+self.noise_P[l]
-                self.Cl_fid[2, l] = cl['te'][l]
-                fid_file.write("%5d  " % l)
-                fid_file.write("%.8g  " % self.Cl_fid[0, l])
-                fid_file.write("%.8g  " % self.Cl_fid[1, l])
-                fid_file.write("%.8g  " % self.Cl_fid[2, l])
-                fid_file.write("\n")
-            # print('\n\n')
-            self.fid_values_exist = True
-            fid_file.close()
-            self.log.warning(
-                "Writing fiducial model in %s, for %s likelihood" % (
-                    self.data_directory+self.fiducial_file,
-                    type(self).__name__))
-            # return 1j
-
         # compute likelihood
 
         chi2 = 0
@@ -151,3 +122,38 @@ class MockCMBLikelihood(Likelihood):
                 (det_mix/det_the + np.log(det_the/det_obs) - 2)
 
         return -chi2/2
+
+    def create_fid_values(self, cl, params, override=False):
+        # Write fiducial model spectra if needed
+        # params should be the dictionary of cosmological parameters
+        # corresponding to the cl provided
+        if not self.fid_values_exist or override:
+            # Store the values now.
+            fid_file = open(os.path.join(
+                self.data_directory, self.fiducial_file), 'w')
+            fid_file.write('# Fiducial parameters')
+            for key, value in params:
+                fid_file.write(', %s = %.5g' % (key, value))
+            fid_file.write('\n')
+            for l in range(self.l_min, self.l_max+1):
+                self.Cl_fid[0, l] = cl['tt'][l]+self.noise_T[l]
+                self.Cl_fid[1, l] = cl['ee'][l]+self.noise_P[l]
+                self.Cl_fid[2, l] = cl['te'][l]
+                fid_file.write("%5d  " % l)
+                fid_file.write("%.8g  " % self.Cl_fid[0, l])
+                fid_file.write("%.8g  " % self.Cl_fid[1, l])
+                fid_file.write("%.8g  " % self.Cl_fid[2, l])
+                fid_file.write("\n")
+            # print('\n\n')
+            self.fid_values_exist = True
+            fid_file.close()
+            self.log.warning(
+                "Writing fiducial model in %s, for %s likelihood" % (
+                    self.data_directory+self.fiducial_file,
+                    type(self).__name__))
+            return True
+        self.log.warning(
+            "Fiducial model in %s for %s likelihood already exists" % (
+                self.data_directory+self.fiducial_file,
+                type(self).__name__))
+        return False
