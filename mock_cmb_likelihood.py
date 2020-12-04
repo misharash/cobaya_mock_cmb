@@ -96,30 +96,32 @@ class MockCMBLikelihood(Likelihood):
 
         chi2 = 0
 
-        Cov_obs = np.zeros((2, 2), 'float64')
-        Cov_the = np.zeros((2, 2), 'float64')
-        Cov_mix = np.zeros((2, 2), 'float64')
+        l = np.arange(self.l_min, self.l_max+1)
 
-        for l in range(self.l_min, self.l_max+1):
+        Cov_obs = np.array([
+            [self.Cl_fid[0, self.l_min:self.l_max+1],
+             self.Cl_fid[2, self.l_min:self.l_max+1]],
+            [self.Cl_fid[2, self.l_min:self.l_max+1],
+             self.Cl_fid[1, self.l_min:self.l_max+1]]])
+        Cov_the = np.array([
+            [cl['tt'][self.l_min:self.l_max+1] +\
+              self.noise_T[self.l_min:self.l_max+1],
+             cl['te'][self.l_min:self.l_max+1]],
+            [cl['te'][self.l_min:self.l_max+1],
+             cl['ee'][self.l_min:self.l_max+1] +\
+              self.noise_P[self.l_min:self.l_max+1]]])
 
-            Cov_obs = np.array([
-                [self.Cl_fid[0, l], self.Cl_fid[2, l]],
-                [self.Cl_fid[2, l], self.Cl_fid[1, l]]])
-            Cov_the = np.array([
-                [cl['tt'][l]+self.noise_T[l], cl['te'][l]],
-                [cl['te'][l], cl['ee'][l]+self.noise_P[l]]])
+        det_obs = Cov_obs[1,1]*Cov_obs[0,0]-Cov_obs[1,0]*Cov_obs[0,1]
+        det_the = Cov_the[1,1]*Cov_the[0,0]-Cov_the[1,0]*Cov_the[0,1]
+        det_mix = np.zeros(self.l_max-self.l_min+1)
 
-            det_obs = np.linalg.det(Cov_obs)
-            det_the = np.linalg.det(Cov_the)
-            det_mix = 0.
+        for i in range(2):
+            Cov_mix = np.copy(Cov_the)
+            Cov_mix[i] = Cov_obs[i]
+            det_mix += Cov_mix[1,1]*Cov_mix[0,0]-Cov_mix[1,0]*Cov_mix[0,1]
 
-            for i in range(2):
-                Cov_mix = np.copy(Cov_the)
-                Cov_mix[:, i] = Cov_obs[:, i]
-                det_mix += np.linalg.det(Cov_mix)
-
-            chi2 += (2.*l+1.)*self.f_sky *\
-                (det_mix/det_the + np.log(det_the/det_obs) - 2)
+        chi2 = np.sum((2.*l+1.)*self.f_sky *\
+            (det_mix/det_the + np.log(det_the/det_obs) - 2))
 
         return -chi2/2
 
