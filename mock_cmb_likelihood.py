@@ -134,8 +134,9 @@ class MockCMBLikelihood(Likelihood):
             fid_file = open(os.path.join(
                 self.data_directory, self.fiducial_file), 'w')
             fid_file.write('# Fiducial parameters')
-            for key, value in params:
-                fid_file.write(', %s = %.5g' % (key, value))
+            for key, value in params.items():
+                value = str(value)
+                fid_file.write(', %s = %s' % (key, value))
             fid_file.write('\n')
             for l in range(self.l_min, self.l_max+1):
                 self.Cl_fid[0, l] = cl['tt'][l]+self.noise_T[l]
