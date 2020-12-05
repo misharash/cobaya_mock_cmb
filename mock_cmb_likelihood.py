@@ -28,18 +28,16 @@ class MockCMBLikelihood(Likelihood):
         self.noise_T = np.zeros(self.l_max+1, 'float64')
         self.noise_P = np.zeros(self.l_max+1, 'float64')
 
-        for l in range(self.l_min, self.l_max+1):
-            self.noise_T[l] = 0
-            self.noise_P[l] = 0
-            for channel in range(self.num_channels):
-                self.noise_T[l] += self.sigma_T[channel]**-2 *\
-                    np.exp(
-                        -l*(l+1)*self.theta_fwhm[channel]**2/8/np.log(2))
-                self.noise_P[l] += self.sigma_P[channel]**-2 *\
-                    np.exp(
-                        -l*(l+1)*self.theta_fwhm[channel]**2/8/np.log(2))
-            self.noise_T[l] = 1/self.noise_T[l]
-            self.noise_P[l] = 1/self.noise_P[l]
+        l = np.arange(self.l_min, self.l_max+1)
+        for channel in range(self.num_channels):
+            self.noise_T[l] += self.sigma_T[channel]**-2 *\
+                np.exp(
+                    -l*(l+1)*self.theta_fwhm[channel]**2/8/np.log(2))
+            self.noise_P[l] += self.sigma_P[channel]**-2 *\
+                np.exp(
+                    -l*(l+1)*self.theta_fwhm[channel]**2/8/np.log(2))
+        self.noise_T[l] = 1/self.noise_T[l]
+        self.noise_P[l] = 1/self.noise_P[l]
 
         ###########
         # Read data
@@ -50,22 +48,13 @@ class MockCMBLikelihood(Likelihood):
         self.fid_values_exist = False
         if not self.data_directory:
             self.data_directory = os.path.dirname(os.path.realpath(__file__))
-        if os.path.exists(os.path.join(
-                self.data_directory, self.fiducial_file)):
+        fiducial_filename = os.path.join(
+                self.data_directory, self.fiducial_file)
+        if os.path.exists(fiducial_filename):
             self.fid_values_exist = True
-            fid_file = open(os.path.join(
-                self.data_directory, self.fiducial_file), 'r')
-            line = fid_file.readline()
-            while line.find('#') != -1:
-                line = fid_file.readline()
-            while (line.find('\n') != -1 and len(line) == 1):
-                line = fid_file.readline()
-            for l in range(self.l_min, self.l_max+1):
-                ll = int(line.split()[0])
-                self.Cl_fid[0, ll] = float(line.split()[1])
-                self.Cl_fid[1, ll] = float(line.split()[2])
-                self.Cl_fid[2, ll] = float(line.split()[3])
-                line = fid_file.readline()
+            fiducial_content = np.loadtxt(fiducial_filename).T
+            ll = fiducial_content[0].astype(int)
+            self.Cl_fid[:, ll] = fiducial_content[1:4]
 
         # Else the file will be created in the loglkl() function.
 
@@ -130,26 +119,21 @@ class MockCMBLikelihood(Likelihood):
         # params should be the dictionary of cosmological parameters
         # corresponding to the cl provided
         if not self.fid_values_exist or override:
-            # Store the values now.
-            fid_file = open(os.path.join(
-                self.data_directory, self.fiducial_file), 'w')
-            fid_file.write('# Fiducial parameters')
+            # header string with parameter values
+            header_str = 'Fiducial parameters: '
             for key, value in params.items():
                 value = str(value)
-                fid_file.write(', %s = %s' % (key, value))
-            fid_file.write('\n')
-            for l in range(self.l_min, self.l_max+1):
-                self.Cl_fid[0, l] = cl['tt'][l]+self.noise_T[l]
-                self.Cl_fid[1, l] = cl['ee'][l]+self.noise_P[l]
-                self.Cl_fid[2, l] = cl['te'][l]
-                fid_file.write("%5d  " % l)
-                fid_file.write("%.8g  " % self.Cl_fid[0, l])
-                fid_file.write("%.8g  " % self.Cl_fid[1, l])
-                fid_file.write("%.8g  " % self.Cl_fid[2, l])
-                fid_file.write("\n")
-            # print('\n\n')
+                header_str += '%s = %s, ' % (key, value)
+            header_str = header_str[:-2]
+            # output arrays
+            l = np.arange(self.l_min, self.l_max+1)
+            out_data = np.array((l, cl['tt'][l]+self.noise_T[l],
+                        cl['ee'][l]+self.noise_P[l], cl['te'][l])).T
+            # write data
+            fid_filename = os.path.join(self.data_directory,
+                                        self.fiducial_file)
+            np.savetxt(fid_filename, out_data, "%.8g", header=header_str)
             self.fid_values_exist = True
-            fid_file.close()
             self.log.warning(
                 "Writing fiducial model in %s, for %s likelihood" % (
                     self.data_directory+self.fiducial_file,
