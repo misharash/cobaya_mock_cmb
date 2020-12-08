@@ -1,3 +1,5 @@
+# Example config to run cobaya in this directory
+# cobaya-run mock_test.yaml
 theory:
   classy:
     extra_args:
@@ -8,6 +10,8 @@ likelihood:
   mock_SO.MockSO:
     python_path: .
   mock_CMBS4.MockCMBS4:
+    python_path: .
+  mock_Planck.MockPlanck:
     python_path: .
 params:
   logA:
