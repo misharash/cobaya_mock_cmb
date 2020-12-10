@@ -28,16 +28,16 @@ class MockCMBLikelihood(Likelihood):
         self.noise_T = np.zeros(self.l_max+1, 'float64')
         self.noise_P = np.zeros(self.l_max+1, 'float64')
 
-        l = np.arange(self.l_min, self.l_max+1)
+        ell = np.arange(self.l_min, self.l_max+1)
         for channel in range(self.num_channels):
-            self.noise_T[l] += self.sigma_T[channel]**-2 *\
+            self.noise_T[ell] += self.sigma_T[channel]**-2 *\
                 np.exp(
-                    -l*(l+1)*self.theta_fwhm[channel]**2/8/np.log(2))
-            self.noise_P[l] += self.sigma_P[channel]**-2 *\
+                    -ell*(ell+1)*self.theta_fwhm[channel]**2/8/np.log(2))
+            self.noise_P[ell] += self.sigma_P[channel]**-2 *\
                 np.exp(
-                    -l*(l+1)*self.theta_fwhm[channel]**2/8/np.log(2))
-        self.noise_T[l] = 1/self.noise_T[l]
-        self.noise_P[l] = 1/self.noise_P[l]
+                    -ell*(ell+1)*self.theta_fwhm[channel]**2/8/np.log(2))
+        self.noise_T[ell] = 1/self.noise_T[ell]
+        self.noise_P[ell] = 1/self.noise_P[ell]
 
         ###########
         # Read data
@@ -75,10 +75,10 @@ class MockCMBLikelihood(Likelihood):
         if self.fid_values_exist:
             # get Cl's from the cosmological code in muK**2
             cl = self.provider.get_Cl(ell_factor=True, units='muK2')
-    
+
             # get likelihood
             return self.compute_lkl(cl, params_values)
-        
+
         # otherwise warn and return -inf
         self.log.warning(
             "Fiducial model not loaded")
@@ -88,7 +88,7 @@ class MockCMBLikelihood(Likelihood):
 
         # compute likelihood
 
-        l = np.arange(self.l_min, self.l_max+1)
+        ell = np.arange(self.l_min, self.l_max+1)
 
         Cov_obs = np.array([
             [self.Cl_fid[0, self.l_min:self.l_max+1],
@@ -96,24 +96,24 @@ class MockCMBLikelihood(Likelihood):
             [self.Cl_fid[2, self.l_min:self.l_max+1],
              self.Cl_fid[1, self.l_min:self.l_max+1]]])
         Cov_the = np.array([
-            [cl['tt'][self.l_min:self.l_max+1] +\
-              self.noise_T[self.l_min:self.l_max+1],
+            [cl['tt'][self.l_min:self.l_max+1] +
+             self.noise_T[self.l_min:self.l_max+1],
              cl['te'][self.l_min:self.l_max+1]],
             [cl['te'][self.l_min:self.l_max+1],
-             cl['ee'][self.l_min:self.l_max+1] +\
-              self.noise_P[self.l_min:self.l_max+1]]])
+             cl['ee'][self.l_min:self.l_max+1] +
+             self.noise_P[self.l_min:self.l_max+1]]])
 
-        det_obs = Cov_obs[1,1]*Cov_obs[0,0]-Cov_obs[1,0]*Cov_obs[0,1]
-        det_the = Cov_the[1,1]*Cov_the[0,0]-Cov_the[1,0]*Cov_the[0,1]
+        det_obs = Cov_obs[1, 1]*Cov_obs[0, 0]-Cov_obs[1, 0]*Cov_obs[0, 1]
+        det_the = Cov_the[1, 1]*Cov_the[0, 0]-Cov_the[1, 0]*Cov_the[0, 1]
         det_mix = np.zeros(self.l_max-self.l_min+1)
 
         for i in range(2):
             Cov_mix = np.copy(Cov_the)
             Cov_mix[i] = Cov_obs[i]
-            det_mix += Cov_mix[1,1]*Cov_mix[0,0]-Cov_mix[1,0]*Cov_mix[0,1]
+            det_mix += Cov_mix[1, 1]*Cov_mix[0, 0]-Cov_mix[1, 0]*Cov_mix[0, 1]
 
-        chi2 = np.sum((2.*l+1.)*self.f_sky *\
-            (det_mix/det_the + np.log(det_the/det_obs) - 2))
+        chi2 = np.sum((2.*ell+1.)*self.f_sky *
+                      (det_mix/det_the + np.log(det_the/det_obs) - 2))
 
         return -chi2/2
 
@@ -131,13 +131,14 @@ class MockCMBLikelihood(Likelihood):
                 header_str += '%s = %s, ' % (key, value)
             header_str = header_str[:-2]
             # output arrays
-            l = np.arange(self.l_min, self.l_max+1)
-            out_data = np.array((l, cl['tt'][l]+self.noise_T[l],
-                        cl['ee'][l]+self.noise_P[l], cl['te'][l])).T
+            ell = np.arange(self.l_min, self.l_max+1)
+            out_data = np.array((ell, cl['tt'][ell]+self.noise_T[ell],
+                                cl['ee'][ell]+self.noise_P[ell],
+                                cl['te'][ell])).T
             # write data
             np.savetxt(fid_filename, out_data, "%.8g", header=header_str)
             self.fid_values_exist = True
-            self.log.warning(
+            self.log.info(
                 "Writing fiducial model in %s" % fid_filename)
             return True
         self.log.warning(
