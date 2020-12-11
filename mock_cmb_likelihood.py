@@ -1,10 +1,11 @@
 ###################################
 # MOCK CMB TYPE LIKELIHOOD
 # --> mock planck, cmbpol, etc.
-# Based on MontePython's Likelihood_mock_cmb
+# Based on MontePython 3.3 Likelihood_mock_cmb
 # and Cobaya's example of likelihood class
 ###################################
 from cobaya.likelihood import Likelihood
+from cobaya.log import LoggedError
 import numpy as np
 import os
 
@@ -13,109 +14,402 @@ class MockCMBLikelihood(Likelihood):
 
     def initialize(self):
         """
-         Compute noise and load fiducial power spectrum, if it exists
+        Set default settings, call other functions to load/set up data
         """
-        ################
-        # Noise spectrum
-        ################
 
-        # convert arcmin to radians
-        self.theta_fwhm *= np.array([np.pi/60/180])
-        self.sigma_T *= np.array([np.pi/60/180])
-        self.sigma_P *= np.array([np.pi/60/180])
+        self.data_directory = getattr(self, 'data_directory', None)
 
-        # compute noise in muK**2
+        if not self.data_directory:
+            self.data_directory = os.path.dirname(os.path.realpath(__file__))
+
+        self.init_noise()
+
+        # - ignore B modes by default:
+        self.Bmodes = getattr(self, 'Bmodes', False)
+        # - do not use delensing by default:
+        self.delensing = getattr(self, 'delensing', False)
+        # - do not include lensing extraction by default:
+        self.LensingExtraction = getattr(self, 'LensingExtraction', False)
+        # - neglect TD correlation by default:
+        self.neglect_TD = getattr(self, 'neglect_TD', True)
+        # - use the lensed TT, TE, EE by default:
+        self.unlensed_clTTTEEE = getattr(self, 'unlensed_clTTTEEE', False)
+        # - do not exclude TTEE by default:
+        self.ExcludeTTTEEE = getattr(self, 'ExcludeTTTEEE', False)
+        if self.ExcludeTTTEEE and not self.LensingExtraction:
+            raise LoggedError(self.log,
+                              "Mock CMB likelihoods where TTTEEE is not used "
+                              "have only been implemented for the deflection "
+                              "spectrum (i.e. not for B-modes), but you do not"
+                              "seem to have lensing extraction enabled")
+        # added by Siavash Yasini
+        self.OnlyTT = getattr(self, 'OnlyTT', False)
+        if self.OnlyTT and self.ExcludeTTTEEE:
+            raise LoggedError(self.log, "OnlyTT and ExcludeTTTEEE cannot be "
+                                        "used simultaneously.")
+
+        if self.delensing:
+            self.init_delensing()
+
+        self.load_fid_values()
+
+        # Explicitly display the flags
+        # to be sure that likelihood does what you expect:
+        self.log.info("Initialised MockCMBLikelihood with following options:")
+        self.log.info("unlensed_clTTTEEE is %s" % str(self.unlensed_clTTTEEE))
+        self.log.info("Bmodes is %s" % str(self.Bmodes))
+        self.log.info("delensing is %s" % str(self.delensing))
+        self.log.info("LensingExtraction is %s" % str(self.LensingExtraction))
+        self.log.info("neglect_TD is %s" % str(self.neglect_TD))
+        self.log.info("ExcludeTTTEEE is %s" % str(self.ExcludeTTTEEE))
+        self.log.info("OnlyTT is %s" % str(self.OnlyTT))
+
+    def init_noise(self):
+        """
+        Set up noise spectrum
+        """
+
+        self.noise_from_file = getattr(self, 'noise_from_file', False)
+
         self.noise_T = np.zeros(self.l_max+1, 'float64')
         self.noise_P = np.zeros(self.l_max+1, 'float64')
 
-        ell = np.arange(self.l_min, self.l_max+1)
-        for channel in range(self.num_channels):
-            self.noise_T[ell] += self.sigma_T[channel]**-2 *\
-                np.exp(
-                    -ell*(ell+1)*self.theta_fwhm[channel]**2/8/np.log(2))
-            self.noise_P[ell] += self.sigma_P[channel]**-2 *\
-                np.exp(
-                    -ell*(ell+1)*self.theta_fwhm[channel]**2/8/np.log(2))
-        self.noise_T[ell] = 1/self.noise_T[ell]
-        self.noise_P[ell] = 1/self.noise_P[ell]
+        if self.noise_from_file:
 
-        ###########
-        # Read data
-        ###########
+            self.noise_file = getattr(self, 'noise_file', None)
+            if not self.noise_file:
+                raise LoggedError(self.log,
+                                  "For reading noise from file,"
+                                  "you must provide noise_file")
+
+            if self.LensingExtraction:
+                self.Nldd = np.zeros(self.l_max+1, 'float64')
+
+            noise_filename = os.path.join(self.data_directory, self.noise_file)
+            if os.path.exists(noise_filename):
+                noise_content = np.loadtxt(noise_filename).T
+                ll = noise_content[0].astype(int)
+                self.noise_T[ll] = noise_content[1]
+                self.noise_P[ll] = noise_content[2]
+                if self.LensingExtraction:
+                    try:
+                        # read noise for C_l^dd = l(l+1) C_l^pp
+                        self.Nldd[ll] = noise_content[3]/(ll*(ll+1)/2./np.pi)
+                    except IndexError:
+                        raise LoggedError(self.log,
+                                          "For reading lensing noise from "
+                                          "file, you must provide one more "
+                                          "column")
+            else:
+                raise LoggedError(self.log,
+                                  "Could not find file %s" %
+                                  self.noise_filename)
+
+        else:
+
+            # convert arcmin to radians
+            self.theta_fwhm *= np.array([np.pi/60/180])
+            self.sigma_T *= np.array([np.pi/60/180])
+            self.sigma_P *= np.array([np.pi/60/180])
+
+            # compute noise in muK**2
+            ll = np.arange(self.l_min, self.l_max+1)
+            for channel in range(self.num_channels):
+                self.noise_T[ll] += self.sigma_T[channel]**-2 *\
+                    np.exp(
+                        -ll*(ll+1)*self.theta_fwhm[channel]**2/8/np.log(2))
+                self.noise_P[ll] += self.sigma_P[channel]**-2 *\
+                    np.exp(
+                        -ll*(ll+1)*self.theta_fwhm[channel]**2/8/np.log(2))
+            self.noise_T[ll] = 1/self.noise_T[ll]
+            self.noise_P[ll] = 1/self.noise_P[ll]
+
+        # trick to remove any information from polarisation for l<30
+        self.no_small_l_pol = getattr(self, 'no_small_l_pol', False)
+
+        if self.no_small_l_pol:
+            ll = np.arange(self.l_min, 30)
+            # plug a noise level of 100 muK**2
+            # equivalent to no detection at all of polarisation
+            self.noise_P[ll] = 100.
+
+        # trick to remove any information from temperature above l_max_TT
+        self.l_max_TT = getattr(self, 'l_max_TT', False)
+
+        if self.l_max_TT:
+            ll = np.arange(self.l_max_TT+1, self.l_max+1)
+            # plug a noise level of 100 muK**2
+            # equivalent to no detection at all of temperature
+            self.noise_T[ll] = 100.
+
+    def init_delensing(self):
+        """
+        Delensing noise: implemented by  S. Clesse
+        """
+
+        self.delensing_file = getattr(self, 'delensing_file', None)
+        if not self.delensing_file:
+            raise LoggedError(self.log,
+                              "For delensing, you must provide delensing_file")
+
+        self.noise_delensing = np.zeros(self.l_max+1)
+        delensing_filename = os.path.join(self.data_directory,
+                                          self.delensing_file)
+        if os.path.exists(delensing_filename):
+            delensing_cont = np.loadtxt(delensing_filename).T
+            ll = delensing_cont[0].astype(int)
+            self.noise_delensing[ll] = delensing_cont[2]/(ll*(ll+1)/2./np.pi)
+            # change 3 to 4 in the above line for CMBxCIB delensing
+
+        else:
+            raise LoggedError(self.log, "Could not find file %s" %
+                              delensing_filename)
+
+    def load_fid_values(self):
+        """
+        Read fiducial power spectrum for TT, EE, TE,
+        [eventually BB or phi-phi, phi-T]
+        """
+
+        # default:
+        if not self.ExcludeTTTEEE:
+            numCls = 3
+        # default 0 if excluding TT EE
+        else:
+            numCls = 0
+
+        # deal with BB:
+        if self.Bmodes:
+            self.index_B = numCls
+            numCls += 1
+
+        # deal with pp, pT (p = CMB lensing potential):
+        if self.LensingExtraction:
+            self.index_pp = numCls
+            numCls += 1
+            if not self.ExcludeTTTEEE:
+                self.index_tp = numCls
+                numCls += 1
+
+            if not self.noise_from_file:
+                # provide a file containing NlDD (noise for the extracted
+                # deflection field spectrum) This option is temporary
+                # because at some point this module will compute NlDD
+                # itself, when logging the fiducial model spectrum.
+                self.temporary_Nldd_file = getattr(self, 'temporary_Nldd_file',
+                                                   None)
+                if not self.temporary_Nldd_file:
+                    raise LoggedError(self.log, "For lensing extraction, you "
+                                      "must provide a temporary_Nldd_file")
+
+                # read the NlDD file
+                self.Nldd = np.zeros(self.l_max+1, 'float64')
+
+                temporary_Nldd_fname = os.path.join(self.data_directory,
+                                                    self.temporary_Nldd_file)
+                if os.path.exists(temporary_Nldd_fname):
+                    temporary_Nldd_content = np.loadtxt(temporary_Nldd_fname).T
+                    ll = temporary_Nldd_content[0].astype(int)
+                    # this line assumes that Nldd is stored in the 4th column
+                    # (can be customised)
+                    self.Nldd[ll] = temporary_Nldd_content[3]/(ll*(ll+1.) /
+                                                               2./np.pi)
+                else:
+                    raise LoggedError(self.log, "Could not find file %s" %
+                                      temporary_Nldd_fname)
 
         # If the file exists, initialize the fiducial values
-        self.Cl_fid = np.zeros((3, self.l_max+1), 'float64')
+        self.Cl_fid = np.zeros((numCls, self.l_max+1), 'float64')
         self.fid_values_exist = False
-        if not self.data_directory:
-            self.data_directory = os.path.dirname(os.path.realpath(__file__))
         fiducial_filename = os.path.join(
                 self.data_directory, self.fiducial_file)
         if os.path.exists(fiducial_filename):
             self.fid_values_exist = True
             fiducial_content = np.loadtxt(fiducial_filename).T
             ll = fiducial_content[0].astype(int)
-            self.Cl_fid[:, ll] = fiducial_content[1:4]
+            try:
+                self.Cl_fid[:, ll] = fiducial_content[1:]
+            except IndexError:
+                raise LoggedError(self.log,
+                                  "Fiducial model file has wrong number of "
+                                  "columns")
+        else:
+            self.log.warning("Fiducial model not loaded")
 
         # Else the file should be created in the create_fid_values() function.
 
     def get_requirements(self):
         """
-        here we need C_L^{tt, te, ee} to l_max
+        here we need C_L^{...} to l_max
+        follows the logics of load/create_fid_values
         """
-        return {'Cl': {'tt': self.l_max, 'te': self.l_max, 'ee': self.l_max}}
+        cl_req = dict()
+        if not self.ExcludeTTTEEE:
+            cl_req.update({'tt': self.l_max, 'te': self.l_max,
+                           'ee': self.l_max})
+        if self.Bmodes:
+            cl_req['bb'] = self.l_max
+        if self.LensingExtraction:
+            cl_req['pp'] = self.l_max
+            if not self.ExcludeTTTEEE:
+                cl_req['tp'] = self.l_max
+        return {'Cl': cl_req}
 
     def logp(self, **params_values):
         """
         Taking a dictionary of (sampled) nuisance parameter values
         and return a log-likelihood.
 
-        here we calculate chi^2  using cl's
+        here calculate chi^2  using cl's without any nuisance pars
         """
         # if fiducial values exist
         if self.fid_values_exist:
-            # get Cl's from the cosmological code in muK**2
-            cl = self.provider.get_Cl(ell_factor=True, units='muK2')
+            if not self.unlensed_clTTTEEE and not self.delensing:
+                # get lensed Cl's from the cosmological code in muK**2
+                cl = self.provider.get_Cl(ell_factor=True, units='muK2')
+            else:
+                raise LoggedError(self.log, "Only lensed Cls supported")
 
             # get likelihood
             return self.compute_lkl(cl, params_values)
 
         # otherwise warn and return -inf
         self.log.warning(
-            "Fiducial model not loaded")
+            "Fiducial model not present, set likelihood=0")
         return -np.inf
 
     def compute_lkl(self, cl, params_values):
+        """
+        compute likelihood
+        """
 
-        # compute likelihood
+        # count number of modes.
+        # number of modes is different form number of spectra
+        # modes = T,E,[B],[D=deflection]
+        # spectra = TT,EE,TE,[BB],[DD,TD]
+        # default:
+        if not self.ExcludeTTTEEE:
+            if self.OnlyTT:
+                num_modes = 1
+            else:
+                num_modes = 2
+        # default 0 if excluding TT EE
+        else:
+            num_modes = 0
+        # add B mode:
+        if self.Bmodes:
+            num_modes += 1
+        # add D mode:
+        if self.LensingExtraction:
+            num_modes += 1
 
-        ell = np.arange(self.l_min, self.l_max+1)
+        ll = np.arange(self.l_min, self.l_max+1)
 
-        Cov_obs = np.array([
-            [self.Cl_fid[0, self.l_min:self.l_max+1],
-             self.Cl_fid[2, self.l_min:self.l_max+1]],
-            [self.Cl_fid[2, self.l_min:self.l_max+1],
-             self.Cl_fid[1, self.l_min:self.l_max+1]]])
-        Cov_the = np.array([
-            [cl['tt'][self.l_min:self.l_max+1] +
-             self.noise_T[self.l_min:self.l_max+1],
-             cl['te'][self.l_min:self.l_max+1]],
-            [cl['te'][self.l_min:self.l_max+1],
-             cl['ee'][self.l_min:self.l_max+1] +
-             self.noise_P[self.l_min:self.l_max+1]]])
+        Cov_obs, Cov_the = self.get_covs(ll, cl)
 
-        det_obs = Cov_obs[1, 1]*Cov_obs[0, 0]-Cov_obs[1, 0]*Cov_obs[0, 1]
-        det_the = Cov_the[1, 1]*Cov_the[0, 0]-Cov_the[1, 0]*Cov_the[0, 1]
+        # reverse the order of axes
+        # because np.linalg.det wants matrix indices to be the last ones
+        # and currently they are two first ones
+        # reversing the order of these two doesn't matter for det
+        Cov_obs = Cov_obs.T
+        Cov_the = Cov_the.T
+
+        # get determinant of observational and theoretical covariance matrices
+        det_obs = np.linalg.det(Cov_obs)
+        det_the = np.linalg.det(Cov_the)
         det_mix = np.zeros(self.l_max-self.l_min+1)
 
-        for i in range(2):
+        # get determinant of mixed matrix (= sum of N theoretical
+        # matrices with, in each of them, the nth column replaced
+        # by that of the observational matrix)
+        for i in range(num_modes):
             Cov_mix = np.copy(Cov_the)
-            Cov_mix[i] = Cov_obs[i]
-            det_mix += Cov_mix[1, 1]*Cov_mix[0, 0]-Cov_mix[1, 0]*Cov_mix[0, 1]
+            Cov_mix[:, :, i] = Cov_obs[:, :, i]
+            det_mix += np.linalg.det(Cov_mix)
 
-        chi2 = np.sum((2.*ell+1.)*self.f_sky *
-                      (det_mix/det_the + np.log(det_the/det_obs) - 2))
+        chi2 = np.sum((2.*ll+1.)*self.f_sky *
+                      (det_mix/det_the + np.log(det_the/det_obs) - num_modes))
 
         return -chi2/2
+
+    def get_covs(self, ll, cl):
+        """
+        Fill the theoretical and observational covariance matrices
+        """
+
+        if self.Bmodes and self.LensingExtraction:
+            raise LoggedError(self.log,
+                              "We have implemented a version of the likelihood"
+                              "with B modes, a version with lensing extraction"
+                              ", but not yet a version with both at the same "
+                              "time. You can implement it.")
+
+        # case with B modes:
+        elif self.Bmodes:
+            Cov_obs = np.array([
+                [self.Cl_fid[0, ll], self.Cl_fid[2, ll], 0],
+                [self.Cl_fid[2, ll], self.Cl_fid[1, ll], 0],
+                [0, 0, self.Cl_fid[3, ll]]])
+            # next 5 lines added by S. Clesse for delensing
+            if self.delensing:
+                Cov_the = np.array([
+                    [cl['tt'][ll]+self.noise_T[ll], cl['te'][ll], 0],
+                    [cl['te'][ll], cl['ee'][ll]+self.noise_P[ll], 0],
+                    [0, 0, cl['bb'][ll]+self.noise_P[ll] +
+                     self.noise_delensing[ll]]])
+            else:
+                Cov_the = np.array([
+                    [cl['tt'][ll]+self.noise_T[ll], cl['te'][ll], 0],
+                    [cl['te'][ll], cl['ee'][ll]+self.noise_P[ll], 0],
+                    [0, 0, cl['bb'][ll]+self.noise_P[ll]]])
+
+        # case with lensing
+        # note that the likelihood is based on ClDD (deflection spectrum)
+        # rather than Clpp (lensing potential spectrum)
+        # But the Bolztmann code input is Clpp
+        # So we make the conversion using ClDD = l*(l+1.)*Clpp
+        # So we make the conversion using ClTD = sqrt(l*(l+1.))*Cltp
+
+        # just DD, i.e. no TT or EE.
+        elif self.LensingExtraction and self.ExcludeTTTEEE:
+            cldd_fid = self.Cl_fid[self.index_pp, ll]
+            cldd = ll*(ll+1.)*cl['pp'][ll]
+            Cov_obs = np.array([[cldd_fid]])
+            Cov_the = np.array([[cldd+self.Nldd[ll]]])
+
+        # Usual TTTEEE plus DD and TD
+        elif self.LensingExtraction:
+            cldd_fid = self.Cl_fid[self.index_pp, ll]
+            cldd = ll*(ll+1.)*cl['pp'][ll]
+            if self.neglect_TD:
+                cltd_fid = 0.
+                cltd = 0.
+            else:
+                cltd_fid = self.Cl_fid[self.index_tp, ll]
+                cltd = np.sqrt(ll*(ll+1.))*cl['tp'][ll]
+
+            Cov_obs = np.array([
+                [self.Cl_fid[0, ll], self.Cl_fid[2, ll], cltd_fid],
+                [self.Cl_fid[2, ll], self.Cl_fid[1, ll], 0],
+                [cltd_fid, 0, cldd_fid]])
+            Cov_the = np.array([
+                [cl['tt'][ll]+self.noise_T[ll], cl['te'][ll], cltd],
+                [cl['te'][ll], cl['ee'][ll]+self.noise_P[ll], 0],
+                [cltd, 0, cldd+self.Nldd[ll]]])
+
+        # case with TT only (Added by Siavash Yasini)
+        elif self.OnlyTT:
+            Cov_obs = np.array([[self.Cl_fid[0, ll]]])
+            Cov_the = np.array([[cl['tt'][ll]+self.noise_T[ll]]])
+
+        # case without B modes nor lensing:
+        else:
+            Cov_obs = np.array([[self.Cl_fid[0, ll], self.Cl_fid[2, ll]],
+                                [self.Cl_fid[2, ll], self.Cl_fid[1, ll]]])
+            Cov_the = np.array([[cl['tt'][ll]+self.noise_T[ll], cl['te'][ll]],
+                                [cl['te'][ll], cl['ee'][ll]+self.noise_P[ll]]])
+
+        return Cov_obs, Cov_the
 
     def create_fid_values(self, cl, params, override=False):
         # Write fiducial model spectra if needed
@@ -131,13 +425,28 @@ class MockCMBLikelihood(Likelihood):
                 header_str += '%s = %s, ' % (key, value)
             header_str = header_str[:-2]
             # output arrays
-            ell = np.arange(self.l_min, self.l_max+1)
-            out_data = np.array((ell, cl['tt'][ell]+self.noise_T[ell],
-                                cl['ee'][ell]+self.noise_P[ell],
-                                cl['te'][ell])).T
+            ll = np.arange(self.l_min, self.l_max+1)
+            out_data = []
+            if not self.ExcludeTTTEEE:
+                out_data.extend((ll, cl['tt'][ll]+self.noise_T[ll],
+                                cl['ee'][ll]+self.noise_P[ll],
+                                cl['te'][ll]))
+            if self.Bmodes:
+                # next three lines added by S. Clesse for delensing
+                if self.delensing:
+                    out_data.append(cl['bb'][ll]+self.noise_P[ll] +
+                                    self.noise_delensing[ll])
+                else:
+                    out_data.append(cl['bb'][ll]+self.noise_P[ll])
+            if self.LensingExtraction:
+                # we want to store clDD = l(l+1) clpp
+                out_data.append(ll*(ll+1.)*cl['pp'][ll] + self.Nldd[ll])
+                # and ClTD = sqrt(l(l+1)) Cltp
+                if not self.ExcludeTTTEEE:
+                    out_data.append(np.sqrt(ll*(ll+1.))*cl['tp'][ll])
+            out_data = np.array(out_data).T
             # write data
             np.savetxt(fid_filename, out_data, "%.8g", header=header_str)
-            self.fid_values_exist = True
             self.log.info(
                 "Writing fiducial model in %s" % fid_filename)
             return True
