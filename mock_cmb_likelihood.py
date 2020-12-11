@@ -10,6 +10,19 @@ import numpy as np
 import os
 
 
+def fast_det(A, N):
+    """
+    determinant working faster than np.linalg.det for 2x2 and 1x1
+    assumes matrix indices N x N to be the first ones
+    """
+
+    if N == 2:  # the default case
+        return A[1, 1]*A[0, 0]-A[1, 0]*A[0, 1]
+    if N == 1:
+        return A[0, 0]
+    return np.linalg.det(A.T)
+
+
 class MockCMBLikelihood(Likelihood):
 
     def initialize(self):
@@ -52,6 +65,9 @@ class MockCMBLikelihood(Likelihood):
             self.init_delensing()
 
         self.load_fid_values()
+
+        if self.fid_values_exist:
+            self.precalc_lkl()
 
         # Explicitly display the flags
         # to be sure that likelihood does what you expect:
@@ -238,6 +254,35 @@ class MockCMBLikelihood(Likelihood):
 
         # Else the file should be created in the create_fid_values() function.
 
+    def precalc_lkl(self):
+        """
+        Calculate things needed for likelihood:
+        count number of modes, set up Cov_obs and det_obs
+        """
+
+        # count number of modes.
+        # number of modes is different from number of spectra
+        # modes = T,E,[B],[D=deflection]
+        # spectra = TT,EE,TE,[BB],[DD,TD]
+        # default:
+        if not self.ExcludeTTTEEE:
+            if self.OnlyTT:
+                self.num_modes = 1
+            else:
+                self.num_modes = 2
+        # default 0 if excluding TT EE
+        else:
+            self.num_modes = 0
+        # add B mode:
+        if self.Bmodes:
+            self.num_modes += 1
+        # add D mode:
+        if self.LensingExtraction:
+            self.num_modes += 1
+
+        # set up likelihood information depending only on fiducials
+        self.set_cov_obs()
+
     def get_requirements(self):
         """
         here we need C_L^{...} to l_max
@@ -274,8 +319,7 @@ class MockCMBLikelihood(Likelihood):
             return self.compute_lkl(cl, params_values)
 
         # otherwise warn and return -inf
-        self.log.warning(
-            "Fiducial model not present, set likelihood=0")
+        self.log.warning("Fiducial model not present, set likelihood=0")
         return -np.inf
 
     def compute_lkl(self, cl, params_values):
@@ -283,58 +327,34 @@ class MockCMBLikelihood(Likelihood):
         compute likelihood
         """
 
-        # count number of modes.
-        # number of modes is different form number of spectra
-        # modes = T,E,[B],[D=deflection]
-        # spectra = TT,EE,TE,[BB],[DD,TD]
-        # default:
-        if not self.ExcludeTTTEEE:
-            if self.OnlyTT:
-                num_modes = 1
-            else:
-                num_modes = 2
-        # default 0 if excluding TT EE
-        else:
-            num_modes = 0
-        # add B mode:
-        if self.Bmodes:
-            num_modes += 1
-        # add D mode:
-        if self.LensingExtraction:
-            num_modes += 1
-
         ll = np.arange(self.l_min, self.l_max+1)
 
-        Cov_obs, Cov_the = self.get_covs(ll, cl)
-
-        # reverse the order of axes
-        # because np.linalg.det wants matrix indices to be the last ones
-        # and currently they are two first ones
-        # reversing the order of these two doesn't matter for det
-        Cov_obs = Cov_obs.T
-        Cov_the = Cov_the.T
+        Cov_the = self.get_cov_the(ll, cl)
+        # Cov_obs already computed in self.Cov_obs
 
         # get determinant of observational and theoretical covariance matrices
-        det_obs = np.linalg.det(Cov_obs)
-        det_the = np.linalg.det(Cov_the)
+        # det_obs already computed in self.det_obs
+        det_the = fast_det(Cov_the, self.num_modes)
         det_mix = np.zeros(self.l_max-self.l_min+1)
 
         # get determinant of mixed matrix (= sum of N theoretical
         # matrices with, in each of them, the nth column replaced
         # by that of the observational matrix)
-        for i in range(num_modes):
+        # here it's actually row instead of column, thanks to symmetry
+        for i in range(self.num_modes):
             Cov_mix = np.copy(Cov_the)
-            Cov_mix[:, :, i] = Cov_obs[:, :, i]
-            det_mix += np.linalg.det(Cov_mix)
+            Cov_mix[i] = self.Cov_obs[i]
+            det_mix += fast_det(Cov_mix, self.num_modes)
 
         chi2 = np.sum((2.*ll+1.)*self.f_sky *
-                      (det_mix/det_the + np.log(det_the/det_obs) - num_modes))
+                      (det_mix/det_the + np.log(det_the/self.det_obs) -
+                       self.num_modes))
 
         return -chi2/2
 
-    def get_covs(self, ll, cl):
+    def get_cov_the(self, ll, cl):
         """
-        Fill the theoretical and observational covariance matrices
+        Fill the theoretical covariance matrix
         """
 
         if self.Bmodes and self.LensingExtraction:
@@ -346,10 +366,6 @@ class MockCMBLikelihood(Likelihood):
 
         # case with B modes:
         elif self.Bmodes:
-            Cov_obs = np.array([
-                [self.Cl_fid[0, ll], self.Cl_fid[2, ll], 0],
-                [self.Cl_fid[2, ll], self.Cl_fid[1, ll], 0],
-                [0, 0, self.Cl_fid[3, ll]]])
             # next 5 lines added by S. Clesse for delensing
             if self.delensing:
                 Cov_the = np.array([
@@ -372,26 +388,17 @@ class MockCMBLikelihood(Likelihood):
 
         # just DD, i.e. no TT or EE.
         elif self.LensingExtraction and self.ExcludeTTTEEE:
-            cldd_fid = self.Cl_fid[self.index_pp, ll]
             cldd = ll*(ll+1.)*cl['pp'][ll]
-            Cov_obs = np.array([[cldd_fid]])
             Cov_the = np.array([[cldd+self.Nldd[ll]]])
 
         # Usual TTTEEE plus DD and TD
         elif self.LensingExtraction:
-            cldd_fid = self.Cl_fid[self.index_pp, ll]
             cldd = ll*(ll+1.)*cl['pp'][ll]
             if self.neglect_TD:
-                cltd_fid = 0.
                 cltd = 0.
             else:
-                cltd_fid = self.Cl_fid[self.index_tp, ll]
                 cltd = np.sqrt(ll*(ll+1.))*cl['tp'][ll]
 
-            Cov_obs = np.array([
-                [self.Cl_fid[0, ll], self.Cl_fid[2, ll], cltd_fid],
-                [self.Cl_fid[2, ll], self.Cl_fid[1, ll], 0],
-                [cltd_fid, 0, cldd_fid]])
             Cov_the = np.array([
                 [cl['tt'][ll]+self.noise_T[ll], cl['te'][ll], cltd],
                 [cl['te'][ll], cl['ee'][ll]+self.noise_P[ll], 0],
@@ -399,17 +406,75 @@ class MockCMBLikelihood(Likelihood):
 
         # case with TT only (Added by Siavash Yasini)
         elif self.OnlyTT:
-            Cov_obs = np.array([[self.Cl_fid[0, ll]]])
             Cov_the = np.array([[cl['tt'][ll]+self.noise_T[ll]]])
+
+        # case without B modes nor lensing:
+        else:
+            Cov_the = np.array([[cl['tt'][ll]+self.noise_T[ll], cl['te'][ll]],
+                                [cl['te'][ll], cl['ee'][ll]+self.noise_P[ll]]])
+
+        return Cov_the
+
+    def set_cov_obs(self):
+        """
+        Fill the observational covariance matrix and compute its determinant
+        """
+
+        ll = np.arange(self.l_min, self.l_max+1)
+
+        if self.Bmodes and self.LensingExtraction:
+            raise LoggedError(self.log,
+                              "We have implemented a version of the likelihood"
+                              "with B modes, a version with lensing extraction"
+                              ", but not yet a version with both at the same "
+                              "time. You can implement it.")
+
+        # case with B modes:
+        elif self.Bmodes:
+            Cov_obs = np.array([
+                [self.Cl_fid[0, ll], self.Cl_fid[2, ll], 0],
+                [self.Cl_fid[2, ll], self.Cl_fid[1, ll], 0],
+                [0, 0, self.Cl_fid[3, ll]]])
+
+        # case with lensing
+        # note that the likelihood is based on ClDD (deflection spectrum)
+        # rather than Clpp (lensing potential spectrum)
+        # But the Bolztmann code input is Clpp
+        # So we make the conversion using ClDD = l*(l+1.)*Clpp
+        # So we make the conversion using ClTD = sqrt(l*(l+1.))*Cltp
+
+        # just DD, i.e. no TT or EE.
+        elif self.LensingExtraction and self.ExcludeTTTEEE:
+            cldd_fid = self.Cl_fid[self.index_pp, ll]
+            Cov_obs = np.array([[cldd_fid]])
+
+        # Usual TTTEEE plus DD and TD
+        elif self.LensingExtraction:
+            cldd_fid = self.Cl_fid[self.index_pp, ll]
+            if self.neglect_TD:
+                cltd_fid = 0.
+            else:
+                cltd_fid = self.Cl_fid[self.index_tp, ll]
+
+            Cov_obs = np.array([
+                [self.Cl_fid[0, ll], self.Cl_fid[2, ll], cltd_fid],
+                [self.Cl_fid[2, ll], self.Cl_fid[1, ll], 0],
+                [cltd_fid, 0, cldd_fid]])
+
+        # case with TT only (Added by Siavash Yasini)
+        elif self.OnlyTT:
+            Cov_obs = np.array([[self.Cl_fid[0, ll]]])
 
         # case without B modes nor lensing:
         else:
             Cov_obs = np.array([[self.Cl_fid[0, ll], self.Cl_fid[2, ll]],
                                 [self.Cl_fid[2, ll], self.Cl_fid[1, ll]]])
-            Cov_the = np.array([[cl['tt'][ll]+self.noise_T[ll], cl['te'][ll]],
-                                [cl['te'][ll], cl['ee'][ll]+self.noise_P[ll]]])
 
-        return Cov_obs, Cov_the
+        # save as attribute
+        self.Cov_obs = Cov_obs
+
+        # compute determinant
+        self.det_obs = fast_det(Cov_obs, self.num_modes)
 
     def create_fid_values(self, cl, params, override=False):
         # Write fiducial model spectra if needed
