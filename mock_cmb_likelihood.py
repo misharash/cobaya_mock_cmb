@@ -12,7 +12,7 @@ import os
 
 def fast_det(A, N):
     """
-    determinant working faster than np.linalg.det for 2x2 and 1x1
+    determinant working faster than np.linalg.det for 2x2, 1x1 and 3x3
     assumes matrix indices N x N to be the first ones
     """
 
@@ -20,7 +20,11 @@ def fast_det(A, N):
         return A[1, 1]*A[0, 0]-A[1, 0]*A[0, 1]
     if N == 1:
         return A[0, 0]
-    return np.linalg.det(A.T)
+    if N == 3:
+        return A[0, 0]*A[1, 1]*A[2, 2]+A[0, 2]*A[1, 0]*A[2, 1] +\
+               A[2, 0]*A[0, 1]*A[1, 2]-A[0, 2]*A[1, 1]*A[2, 0] -\
+               A[0, 0]*A[1, 2]*A[2, 1]-A[2, 2]*A[1, 0]*A[0, 1]
+    return np.linalg.det(A.T).T
 
 
 class MockCMBLikelihood(Likelihood):
