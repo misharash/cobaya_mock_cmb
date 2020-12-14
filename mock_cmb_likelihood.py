@@ -39,8 +39,6 @@ class MockCMBLikelihood(Likelihood):
         if not self.data_directory:
             self.data_directory = os.path.dirname(os.path.realpath(__file__))
 
-        self.init_noise()
-
         # - ignore B modes by default:
         self.Bmodes = getattr(self, 'Bmodes', False)
         # - do not use delensing by default:
@@ -64,6 +62,8 @@ class MockCMBLikelihood(Likelihood):
         if self.OnlyTT and self.ExcludeTTTEEE:
             raise LoggedError(self.log, "OnlyTT and ExcludeTTTEEE cannot be "
                                         "used simultaneously.")
+
+        self.init_noise()
 
         if self.delensing:
             self.init_delensing()
