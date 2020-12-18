@@ -315,7 +315,8 @@ class MockCMBLikelihood(Likelihood):
         if self.fid_values_exist:
             if not self.unlensed_clTTTEEE and not self.delensing:
                 # get lensed Cl's from the cosmological code in muK**2
-                cl = self.provider.get_Cl(ell_factor=True, units='muK2')
+                # without l*(l+1)/(2*pi) factor (default)
+                cl = self.provider.get_Cl(units='muK2')
             else:
                 raise LoggedError(self.log, "Only lensed Cls supported")
 

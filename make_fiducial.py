@@ -43,7 +43,7 @@ model_fiducial = get_model(info_fiducial)
 
 model_fiducial.logposterior({})
 
-Cls = model_fiducial.provider.get_Cl(ell_factor=True, units="muK2")
+Cls = model_fiducial.provider.get_Cl(units="muK2")
 
 MockPlanck().create_fid_values(Cls, fiducial_params_full, override=True)
 
