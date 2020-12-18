@@ -244,15 +244,14 @@ class MockCMBLikelihood(Likelihood):
         fiducial_filename = os.path.join(
                 self.data_directory, self.fiducial_file)
         if os.path.exists(fiducial_filename):
-            self.fid_values_exist = True
             fiducial_content = np.loadtxt(fiducial_filename).T
             ll = fiducial_content[0].astype(int)
             try:
                 self.Cl_fid[:, ll] = fiducial_content[1:]
+                self.fid_values_exist = True
             except IndexError:
-                raise LoggedError(self.log,
-                                  "Fiducial model file has wrong number of "
-                                  "columns")
+                self.log.warning("Fiducial model file has wrong number of rows"
+                                 " or columns, so not loaded")
         else:
             self.log.warning("Fiducial model not loaded")
 
