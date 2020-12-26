@@ -7,6 +7,9 @@ theory:
       N_ncdm: 1
       N_ur: 2.0328
 likelihood:
+  # combining all these is unphysical
+  # because they are not independent, covering the same sky
+  # done here just for checking that the likelihoods are working
   mock_SO.MockSO:
     python_path: .
   mock_SO_baseline.MockSOBaseline:
@@ -15,6 +18,10 @@ likelihood:
     python_path: .
   mock_CMBS4.MockCMBS4:
     python_path: .
+  mock_CMBS4sens0.MockCMBS4sens0:
+    python_path: .
+  # in real runs one should use only one among all SO and CMB-S4
+  # with possible addition of mock Planck, which is made independent of SO
   mock_Planck.MockPlanck:
     python_path: .
 params:
