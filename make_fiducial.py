@@ -4,6 +4,7 @@ from cobaya.model import get_model
 from mock_Planck import MockPlanck
 from mock_SO import MockSO
 from mock_SO_baseline import MockSOBaseline
+from mock_SO_goal import MockSOGoal
 from mock_CMBS4 import MockCMBS4
 
 fiducial_params = {
@@ -35,6 +36,7 @@ info_fiducial = {
     'params': fiducial_params,
     'likelihood': {'mock_SO.MockSO': {'python_path': '.'},
                    'mock_SO_baseline.MockSOBaseline': {'python_path': '.'},
+                   'mock_SO_goal.MockSOGoal': {'python_path': '.'},
                    'mock_CMBS4.MockCMBS4': {'python_path': '.'},
                    'mock_Planck.MockPlanck': {'python_path': '.'}},
     'theory': {'classy': {"extra_args": fiducial_params_extra}}}
@@ -50,5 +52,7 @@ MockPlanck().create_fid_values(Cls, fiducial_params_full, override=True)
 MockSO().create_fid_values(Cls, fiducial_params_full, override=True)
 
 MockSOBaseline().create_fid_values(Cls, fiducial_params_full, override=True)
+
+MockSOGoal().create_fid_values(Cls, fiducial_params_full, override=True)
 
 MockCMBS4().create_fid_values(Cls, fiducial_params_full, override=True)

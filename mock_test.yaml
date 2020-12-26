@@ -11,6 +11,8 @@ likelihood:
     python_path: .
   mock_SO_baseline.MockSOBaseline:
     python_path: .
+  mock_SO_goal.MockSOGoal:
+    python_path: .
   mock_CMBS4.MockCMBS4:
     python_path: .
   mock_Planck.MockPlanck:
