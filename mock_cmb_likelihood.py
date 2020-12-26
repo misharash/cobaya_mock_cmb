@@ -121,9 +121,8 @@ class MockCMBLikelihood(Likelihood):
                                           "file, you must provide one more "
                                           "column")
             else:
-                raise LoggedError(self.log,
-                                  "Could not find file %s" %
-                                  self.noise_filename)
+                raise LoggedError(self.log, "Could not find file %s" %
+                                            noise_filename)
 
         else:
 
