@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Example script to create fiducial values for mock CMB likelihoods
 from cobaya.model import get_model
 from mock_Planck import MockPlanck
@@ -8,21 +8,20 @@ from mock_SO_goal import MockSOGoal
 from mock_CMBS4 import MockCMBS4
 from mock_CMBS4sens0 import MockCMBS4sens0
 
+#from MAP fit with fixed massless neutrinos and nuisance-marginalized high-l
 fiducial_params = {
     # LambdaCDM parameters
-    'H0': 67.37,
-    'omega_b': 0.02237,
-    'N_ur': 2.037,
-    'omega_cdm': 0.1200,
-    'N_ncdm': 1,
-    'omega_ncdm': 0.0006451439,
-    'm_ncdm': 0.06,
-    'A_s': 2.108e-9,
-    # 'sigma8':0.8113,
-    'n_s': 0.9619,
-    'tau_reio': 0.0546,
-    # Take fixed value for primordial He (instead of automatic BBN adjustment)
-    'YHe': 0.2454006
+    'H0': 68.17556,
+    # '100*theta_s': 1.041868609e+00,
+    'omega_b': 2.241687874e-02,
+    'N_ur': 3.046, #three massless neutrinos
+    'omega_cdm': 1.193178755e-01,
+    'A_s': 2.093760877e-09,
+    # 'sigma8': 8.210910025e-01,
+    'n_s': 9.664475329e-01,
+    'tau_reio': 5.401592917e-02,
+    # Take fixed value for primordial He (instead of automatic BBN adjustment, though they should be same)
+    'YHe': 2.454137328e-01
 }
 
 fiducial_params_extra = {
