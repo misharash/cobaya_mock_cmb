@@ -494,9 +494,9 @@ class MockCMBLikelihood(Likelihood):
             header_str = header_str[:-2]
             # output arrays
             ll = np.arange(self.l_min, self.l_max+1)
-            out_data = []
+            out_data = [ll]
             if not self.ExcludeTTTEEE:
-                out_data.extend((ll, cl['tt'][ll]+self.noise_T[ll],
+                out_data.extend((cl['tt'][ll]+self.noise_T[ll],
                                 cl['ee'][ll]+self.noise_P[ll],
                                 cl['te'][ll]))
             if self.Bmodes:
