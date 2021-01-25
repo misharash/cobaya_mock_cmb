@@ -10,8 +10,8 @@ fiducial_file: mock_SO_baseline_fiducial.dat
 noise_from_file: True
 noise_file: SO_LAT_Nell_T_E_baseline_fsky0p4_ILC_CMB.txt
 
-# noise file provides data from ell = 10 to 4000
+# noise file provides data from ell = 10 to 5000
 
 l_min: 10
-l_max: 4000
+l_max: 5000
 f_sky: 0.4
