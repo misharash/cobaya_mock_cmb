@@ -8,6 +8,7 @@ from cobaya.likelihood import Likelihood
 from cobaya.log import LoggedError
 import numpy as np
 import os
+import sys
 
 
 def fast_det(A, N):
@@ -37,7 +38,8 @@ class MockCMBLikelihood(Likelihood):
         self.data_directory = getattr(self, 'data_directory', None)
 
         if not self.data_directory:
-            self.data_directory = os.path.dirname(os.path.realpath(__file__))
+            path = sys.modules[self.__module__].__file__
+            self.data_directory = os.path.dirname(os.path.realpath(path))
 
         # - ignore B modes by default:
         self.Bmodes = getattr(self, 'Bmodes', False)
