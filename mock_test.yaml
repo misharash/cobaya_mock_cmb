@@ -10,19 +10,19 @@ likelihood:
   # combining all these is unphysical
   # because they are not independent, covering the same sky
   # done here just for checking that the likelihoods are working
-  mock_SO.MockSO:
+  cobaya_mock_cmb.MockSO:
     python_path: .
-  mock_SO_baseline.MockSOBaseline:
+  cobaya_mock_cmb.MockSOBaseline:
     python_path: .
-  mock_SO_goal.MockSOGoal:
+  cobaya_mock_cmb.MockSOGoal:
     python_path: .
-  mock_CMBS4.MockCMBS4:
+  cobaya_mock_cmb.MockCMBS4:
     python_path: .
-  mock_CMBS4sens0.MockCMBS4sens0:
+  cobaya_mock_cmb.MockCMBS4sens0:
     python_path: .
   # in real runs one should use only one among all SO and CMB-S4
   # with possible addition of mock Planck, which is made independent of SO
-  mock_Planck.MockPlanck:
+  cobaya_mock_cmb.MockPlanck:
     python_path: .
 params:
   logA:
