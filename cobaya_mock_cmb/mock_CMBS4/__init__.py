@@ -1,4 +1,4 @@
-from mock_cmb_likelihood import MockCMBLikelihood
+from ..mock_cmb_likelihood import MockCMBLikelihood
 
 
 class MockCMBS4(MockCMBLikelihood):
