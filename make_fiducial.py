@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
 # Example script to create fiducial values for mock CMB likelihoods
 from cobaya.model import get_model
-from mock_Planck import MockPlanck
-from mock_SO import MockSO
-from mock_SO_baseline import MockSOBaseline
-from mock_SO_goal import MockSOGoal
-from mock_CMBS4 import MockCMBS4
-from mock_CMBS4sens0 import MockCMBS4sens0
+from cobaya_mock_cmb import MockPlanck, MockSO, MockSOBaseline, MockSOGoal, MockCMBS4, MockCMBS4sens0
 
 #from MAP fit with fixed massless neutrinos and nuisance-marginalized high-l
 fiducial_params = {
@@ -34,12 +29,12 @@ fiducial_params_full.update(fiducial_params_extra)
 
 info_fiducial = {
     'params': fiducial_params,
-    'likelihood': {'mock_SO.MockSO': {'python_path': '.'},
-                   'mock_SO_baseline.MockSOBaseline': {'python_path': '.'},
-                   'mock_SO_goal.MockSOGoal': {'python_path': '.'},
-                   'mock_CMBS4.MockCMBS4': {'python_path': '.'},
-                   'mock_CMBS4sens0.MockCMBS4sens0': {'python_path': '.'},
-                   'mock_Planck.MockPlanck': {'python_path': '.'}},
+    'likelihood': {'cobaya_mock_cmb.MockSO': {'python_path': '.'},
+                   'cobaya_mock_cmb.MockSOBaseline': {'python_path': '.'},
+                   'cobaya_mock_cmb.MockSOGoal': {'python_path': '.'},
+                   'cobaya_mock_cmb.MockCMBS4': {'python_path': '.'},
+                   'cobaya_mock_cmb.MockCMBS4sens0': {'python_path': '.'},
+                   'cobaya_mock_cmb.MockPlanck': {'python_path': '.'}},
     'theory': {'classy': {"extra_args": fiducial_params_extra}}}
 
 model_fiducial = get_model(info_fiducial)
