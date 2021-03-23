@@ -12,3 +12,5 @@ from .mock_SO_baseline import MockSOBaseline
 from .mock_SO_goal import MockSOGoal
 from .mock_CMBS4 import MockCMBS4
 from .mock_CMBS4sens0 import MockCMBS4sens0
+from .mock_SO_clumping import MockSOClumping
+from .mock_CMBS4_clumping import MockCMBS4Clumping
