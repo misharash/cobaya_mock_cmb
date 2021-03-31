@@ -14,9 +14,7 @@ fiducial_params = {
     'A_s': 2.093760877e-09,
     # 'sigma8': 8.210910025e-01,
     'n_s': 9.664475329e-01,
-    'tau_reio': 5.401592917e-02,
-    # Take fixed value for primordial He (instead of automatic BBN adjustment, though they should be same)
-    'YHe': 2.454137328e-01
+    'tau_reio': 5.401592917e-02
 }
 
 fiducial_params_extra = {
