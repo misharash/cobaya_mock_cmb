@@ -3,7 +3,7 @@ Mock CMB likelihood class for [Cobaya sampler](https://github.com/CobayaSampler/
 
 ## Python package contents (classes)
 
-* MockCMBLikelihood - base mock CMB likelihood class. Ported [MontePython's 3.3 Likelihood_mock_cmb](https://github.com/brinckmann/montepython_public/blob/master/montepython/likelihood_class.py) with the help of [Cobaya's example of likelihood class](https://cobaya.readthedocs.io/en/latest/cosmo_external_likelihood_class.html), most loops replaced with Numpy vectorized operations. Unlensed Cl's not supported because Cobaya's theory classes don't provide them.
+* MockCMBLikelihood - base mock CMB likelihood class. Ported [MontePython's 3.3 Likelihood_mock_cmb](https://github.com/brinckmann/montepython_public/blob/master/montepython/likelihood_class.py) with the help of [Cobaya's example of likelihood class](https://cobaya.readthedocs.io/en/latest/cosmo_external_likelihood_class.html), most loops replaced with Numpy vectorized operations. Unlensed Cl's supported, but note that Cobaya theory class wrappers didn't provide them [until Jan 2021](https://github.com/CobayaSampler/cobaya/commit/6af50e519a294b2bde82257d88bf636710c1ea64).
 * MockSO - Simons Observatory (SO) model following [Sailer, Schaan and Ferraro 2020](https://arxiv.org/abs/2007.04325), based on MontePython config by [Julian Munoz](https://github.com/JulianBMunoz).
 * MockSOBaseline - Simons Observatory (SO) with TT, EE deproj0 [noise curves](https://simonsobservatory.org/assets/supplements/20180822_SO_Noise_Public.tgz) (baseline sensitivity).
 * MockSOGoal - Simons Observatory (SO) with TT, EE deproj0 [noise curves](https://simonsobservatory.org/assets/supplements/20180822_SO_Noise_Public.tgz) (goal sensitivity).

@@ -290,19 +290,31 @@ class MockCMBLikelihood(Likelihood):
     def get_requirements(self):
         """
         here we need C_L^{...} to l_max
-        follows the logics of load/create_fid_values
+        follows the logics of load/create_fid_values and logp
         """
-        cl_req = dict()
-        if not self.ExcludeTTTEEE:
-            cl_req.update({'tt': self.l_max, 'te': self.l_max,
-                           'ee': self.l_max})
+        # inner tuple of requirements
+        cl_req = (dict(), dict())
+        # 0 (False) is lensed Cl and 1 (True) is unlensed
+        keys = ("Cl", "unlensed_Cl")
+        # fill the requirements
+        if self.OnlyTT:
+            cl_req[self.unlensed_clTTTEEE]['tt'] = self.l_max
+        elif not self.ExcludeTTTEEE:
+            cl_req[self.unlensed_clTTTEEE].update({'tt': self.l_max,
+                                                   'te': self.l_max,
+                                                   'ee': self.l_max})
         if self.Bmodes:
-            cl_req['bb'] = self.l_max
+            cl_req[self.delensing]['bb'] = self.l_max
         if self.LensingExtraction:
-            cl_req['pp'] = self.l_max
+            cl_req[self.unlensed_clTTTEEE]['pp'] = self.l_max
             if not self.ExcludeTTTEEE:
-                cl_req['tp'] = self.l_max
-        return {'Cl': cl_req}
+                cl_req[self.unlensed_clTTTEEE]['tp'] = self.l_max
+        # leave only not empty requirements for output
+        cl_req_out = dict()
+        for i, key in enumerate(keys):
+            if len(cl_req[i])>0:
+                cl_req_out[key] = cl_req[i]
+        return cl_req_out
 
     def logp(self, **params_values):
         """
@@ -313,12 +325,22 @@ class MockCMBLikelihood(Likelihood):
         """
         # if fiducial values exist
         if self.fid_values_exist:
-            if not self.unlensed_clTTTEEE and not self.delensing:
+            if self.unlensed_clTTTEEE:
+                # get unlensed Cl's from the cosmological code in muK**2
+                cl = self.provider.get_unlensed_Cl(units='muK2')
+                # exception: for non-delensed B modes we need the lensed BB spectrum
+                # (this case is usually not useful/relevant)
+                if self.Bmodes and (not self.delensing):
+                    cl_lensed = self.provider.get_Cl(units='muK2')
+                    cl['bb'] = cl_lensed['bb']
+            else:
                 # get lensed Cl's from the cosmological code in muK**2
                 # without l*(l+1)/(2*pi) factor (default)
                 cl = self.provider.get_Cl(units='muK2')
-            else:
-                raise LoggedError(self.log, "Only lensed Cls supported")
+                # exception: for delensed B modes we need the unlensed spectrum
+                if self.Bmodes and self.delensing:
+                    cl_unlensed = self.provider.get_unlensed_Cl(units='muK2')
+                    cl['bb'] = cl_unlensed['bb']
 
             # get likelihood
             return self.compute_lkl(cl, params_values)
