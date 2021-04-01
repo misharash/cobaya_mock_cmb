@@ -314,7 +314,7 @@ class MockCMBLikelihood(Likelihood):
         # leave only not empty requirements for output
         cl_req_out = dict()
         for i, key in enumerate(keys):
-            if len(cl_req[i])>0:
+            if len(cl_req[i]) > 0:
                 cl_req_out[key] = cl_req[i]
         return cl_req_out
 
@@ -330,7 +330,8 @@ class MockCMBLikelihood(Likelihood):
             if self.unlensed_clTTTEEE:
                 # get unlensed Cl's from the cosmological code in muK**2
                 cl = self.provider.get_unlensed_Cl(units='muK2')
-                # exception: for non-delensed B modes we need the lensed BB spectrum
+                # exception: for non-delensed B modes
+                # we need the lensed BB spectrum
                 # (this case is usually not useful/relevant)
                 if self.Bmodes and (not self.delensing):
                     cl_lensed = self.provider.get_Cl(units='muK2')

@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # Example script to create fiducial values for mock CMB likelihoods
 from cobaya.model import get_model
-from cobaya_mock_cmb import MockPlanck, MockSO, MockSOBaseline, MockSOGoal, MockCMBS4, MockCMBS4sens0
+from cobaya_mock_cmb import (MockPlanck, MockSO, MockSOBaseline, MockSOGoal,
+                             MockCMBS4, MockCMBS4sens0)
 
-#from MAP fit with fixed massless neutrinos and nuisance-marginalized high-l
+# from MAP fit with fixed massless neutrinos and nuisance-marginalized high-l
 fiducial_params = {
     # LambdaCDM parameters
     'H0': 68.17556,
     # '100*theta_s': 1.041868609e+00,
     'omega_b': 2.241687874e-02,
-    'N_ur': 3.046, #three massless neutrinos
+    'N_ur': 3.046,  # three massless neutrinos
     'omega_cdm': 1.193178755e-01,
     'A_s': 2.093760877e-09,
     # 'sigma8': 8.210910025e-01,

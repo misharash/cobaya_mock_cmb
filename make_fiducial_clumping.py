@@ -4,13 +4,14 @@
 from cobaya.model import get_model
 from cobaya_mock_cmb import MockSOClumping, MockCMBS4Clumping
 
-#from best fit to Planck+SH0ES with fixed massless neutrinos and nuisance-marginalized high-l
+# from best fit to Planck+SH0ES
+# with fixed massless neutrinos and nuisance-marginalized high-l
 fiducial_params = {
     # LambdaCDM parameters
     'H0': 7.077805000e+01,
     # '100*theta_s': 1.042042099e+00,
     'omega_b': 2.276093940e-02,
-    'N_ur': 3.046, #three massless neutrinos
+    'N_ur': 3.046,  # three massless neutrinos
     'omega_cdm': 1.181255826e-01,
     'A_s': 2.176893349e-09,
     # 'sigma8': 8.384906370e-01,
