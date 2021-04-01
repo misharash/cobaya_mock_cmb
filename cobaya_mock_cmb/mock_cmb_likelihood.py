@@ -290,19 +290,21 @@ class MockCMBLikelihood(Likelihood):
     def get_requirements(self):
         """
         here we need C_L^{...} to l_max
-        follows the logics of load/create_fid_values and logp
+        but which Cl is a question
+        follows the logics of load/create_fid_values, logp and precalc_lkl
         """
         # inner tuple of requirements
         cl_req = (dict(), dict())
         # 0 (False) is lensed Cl and 1 (True) is unlensed
         keys = ("Cl", "unlensed_Cl")
         # fill the requirements
-        if self.OnlyTT:
-            cl_req[self.unlensed_clTTTEEE]['tt'] = self.l_max
-        elif not self.ExcludeTTTEEE:
-            cl_req[self.unlensed_clTTTEEE].update({'tt': self.l_max,
-                                                   'te': self.l_max,
-                                                   'ee': self.l_max})
+        if not self.ExcludeTTTEEE:
+            if self.OnlyTT:
+                cl_req[self.unlensed_clTTTEEE]['tt'] = self.l_max
+            else:
+                cl_req[self.unlensed_clTTTEEE].update({'tt': self.l_max,
+                                                       'te': self.l_max,
+                                                       'ee': self.l_max})
         if self.Bmodes:
             cl_req[self.delensing]['bb'] = self.l_max
         if self.LensingExtraction:
