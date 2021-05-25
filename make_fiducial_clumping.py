@@ -8,19 +8,19 @@ from cobaya_mock_cmb import MockSOClumping, MockCMBS4Clumping
 # with fixed massless neutrinos and nuisance-marginalized high-l
 fiducial_params = {
     # LambdaCDM parameters
-    'H0': 70.40517,
-    # '100*theta_s': 1.041784198e+00,
-    'omega_b': 2.257642942e-02,
+    'H0': 70.91588,
+    # '100*theta_s': 1.041771159e+00,
+    'omega_b': 2.271421832e-02,
     'N_ur': 3.046,  # three massless neutrinos
-    'omega_cdm': 1.192339944e-01,
-    'A_s': 2.083701031e-09,
-    # 'sigma8': 8.241928283e-01,
-    'n_s': 9.670325228e-01,
-    'tau_reio': 5.316924363e-02,
+    'omega_cdm': 1.199919146e-01,
+    'A_s': 2.113151105e-09,
+    # 'sigma8': 8.334149150e-01,
+    'n_s': 9.655213736e-01,
+    'tau_reio': 5.420878071e-02,
     # clumping space
-    'delta_m': -8.744332570e-01,
-    'delta_p': 4.130336675e-01,
-    'f2V': 2.858076385e-01
+    'delta_m': -9.549925860e-01,
+    'delta_p': 1.319526438e+00,
+    'f2V': 6.516101687e-01
 }
 
 fiducial_params_extra = {
