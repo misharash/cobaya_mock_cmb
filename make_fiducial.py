@@ -4,18 +4,18 @@ from cobaya.model import get_model
 from cobaya_mock_cmb import (MockPlanck, MockSO, MockSOBaseline, MockSOGoal,
                              MockCMBS4, MockCMBS4sens0)
 
-# from MAP fit with fixed massless neutrinos and nuisance-marginalized high-l
+# from best fit with fixed massless neutrinos and nuisance-marginalized high-l
 fiducial_params = {
     # LambdaCDM parameters
-    'H0': 68.17556,
-    # '100*theta_s': 1.041868609e+00,
-    'omega_b': 2.241687874e-02,
+    'H0': 68.1461,
+    # '100*theta_s': 1.041920539e+00,
+    'omega_b': 2.241606328e-02,
     'N_ur': 3.046,  # three massless neutrinos
-    'omega_cdm': 1.193178755e-01,
-    'A_s': 2.093760877e-09,
-    # 'sigma8': 8.210910025e-01,
-    'n_s': 9.664475329e-01,
-    'tau_reio': 5.401592917e-02
+    'omega_cdm': 1.194462584e-01,
+    'A_s': 2.109371924e-09,
+    # 'sigma8': 8.245006041e-01,
+    'n_s': 9.660360599e-01,
+    'tau_reio': 5.142494234e-02
 }
 
 fiducial_params_extra = {
