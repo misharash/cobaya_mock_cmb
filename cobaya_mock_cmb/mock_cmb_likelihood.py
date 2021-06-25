@@ -544,6 +544,13 @@ class MockCMBLikelihood(Likelihood):
             np.savetxt(fid_filename, out_data, "%.8g", header=header_str)
             self.log.info(
                 "Writing fiducial model in %s" % fid_filename)
+            # (re-)initialize fiducial power spectra
+            # and prepare likelihood calculation
+            self.load_fid_values()
+            if self.fid_values_exist:
+                self.precalc_lkl()
+            else:
+                self.log.warning("Fiducial model not read")
             return True
         self.log.warning(
             "Fiducial model in %s already exists" % fid_filename)
