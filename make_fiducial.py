@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 # Example script to create fiducial values for mock CMB likelihoods
 from cobaya.model import get_model
-from cobaya_mock_cmb import (MockPlanck, MockSO, MockSOBaseline, MockSOGoal,
-                             MockCMBS4, MockCMBS4sens0)
 
 # from best fit with fixed massless neutrinos and nuisance-marginalized high-l
 fiducial_params = {
@@ -42,14 +40,5 @@ model_fiducial.logposterior({})
 
 Cls = model_fiducial.provider.get_Cl(units="muK2")
 
-MockPlanck().create_fid_values(Cls, fiducial_params_full, override=True)
-
-MockSO().create_fid_values(Cls, fiducial_params_full, override=True)
-
-MockSOBaseline().create_fid_values(Cls, fiducial_params_full, override=True)
-
-MockSOGoal().create_fid_values(Cls, fiducial_params_full, override=True)
-
-MockCMBS4().create_fid_values(Cls, fiducial_params_full, override=True)
-
-MockCMBS4sens0().create_fid_values(Cls, fiducial_params_full, override=True)
+for likelihood in model_fiducial.likelihood.values():
+    likelihood.create_fid_values(Cls, fiducial_params_full, override=True)

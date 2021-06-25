@@ -2,7 +2,6 @@
 # Example script to create fiducial values for mock CMB likelihoods
 # with non-LCDM fiducial, namely with small-scale baryon clumping
 from cobaya.model import get_model
-from cobaya_mock_cmb import MockSOClumping, MockCMBS4Clumping
 
 # from best fit to Planck+SH0ES
 # with fixed massless neutrinos and nuisance-marginalized high-l
@@ -43,6 +42,5 @@ model_fiducial.logposterior({})
 
 Cls = model_fiducial.provider.get_Cl(units="muK2")
 
-MockSOClumping().create_fid_values(Cls, fiducial_params_full, override=True)
-
-MockCMBS4Clumping().create_fid_values(Cls, fiducial_params_full, override=True)
+for likelihood in model_fiducial.likelihood.values():
+    likelihood.create_fid_values(Cls, fiducial_params_full, override=True)
