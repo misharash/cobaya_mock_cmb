@@ -1,6 +1,8 @@
 # cobaya_mock_cmb
 Mock CMB likelihood class for [Cobaya sampler](https://github.com/CobayaSampler/cobaya), and several specific experiment examples.
 
+Introduced in [Rashkovetskyi et al 2021](https://arxiv.org/abs/2108.02747), so please cite it if you use the code.
+
 ## Python package contents (classes)
 
 * MockCMBLikelihood - base mock CMB likelihood class. Ported [MontePython's 3.3 Likelihood_mock_cmb](https://github.com/brinckmann/montepython_public/blob/master/montepython/likelihood_class.py) with the help of [Cobaya's example of likelihood class](https://cobaya.readthedocs.io/en/latest/cosmo_external_likelihood_class.html), most loops replaced with Numpy vectorized operations. Unlensed Cl's supported, but note that Cobaya theory class wrappers didn't provide them [until Jan 2021](https://github.com/CobayaSampler/cobaya/commit/6af50e519a294b2bde82257d88bf636710c1ea64).
